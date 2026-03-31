@@ -1,0 +1,8 @@
+<section name="country">
+    <param name="country" type="select" label="country" help="chose a country from the list of countries">
+        <options from_data_table="countries">
+            <column name="value" index="0"/>
+            <column name="name" index="1"/>
+        </options>
+    </param>
+</section>

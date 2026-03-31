@@ -1,0 +1,14 @@
+	#if $SECTION_NAME.isCustomBbox == "predef":
+		--SECTION_NAME__country $SECTION_NAME.country
+		--SECTION_NAME__region $SECTION_NAME.region
+	#else:
+		--SECTION_NAME__xmin $SECTION_NAME.bbox.xmin
+		--SECTION_NAME__ymin $SECTION_NAME.bbox.ymin
+		--SECTION_NAME__xmax $SECTION_NAME.bbox.xmax
+		--SECTION_NAME__ymax $SECTION_NAME.bbox.ymax
+		#if $SECTION_NAME.selectCRSMode.CRSMode == "name":
+			--SECTION_NAME__crs $SECTION_NAME.selectCRSMode.name
+		#else:
+			--SECTION_NAME__crs $SECTION_NAME.selectCRSMode.code
+		#end if
+	#end if

@@ -1,0 +1,15 @@
+<section name="countryRegion">
+    <param name="country" type="select" label="country" help="chose a country from the list of countries">
+                <options from_data_table="countries">
+                <column name="value" index="0"/>
+                <column name="name" index="1"/>
+                </options>
+    </param>
+    <param name="region" type="select" label="region" help="chose a region from the list of regions or leave empty" optional="true">
+        <options from_data_table="regions">
+        <column name="value" index="0"/>
+        <column name="name" index="1"/>
+        <filter type="param_value" ref="country" column="2"/>
+        </options>
+    </param>
+</section>

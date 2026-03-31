@@ -1,0 +1,2 @@
+	--SECTION_NAME__country $SECTION_NAME.country
+	--SECTION_NAME__region $SECTION_NAME.region

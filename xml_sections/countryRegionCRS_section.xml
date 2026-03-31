@@ -1,0 +1,33 @@
+<section name="countryRegionCRS">
+    <param name="country" type="select" label="country" help="chose a country from the list of countries">
+        <options from_data_table="countries">
+            <column name="value" index="0"/>
+            <column name="name" index="1"/>
+        </options>
+    </param>
+    <param name="region" type="select" label="region" help="chose a region from the list of regions or leave empty" optional="true">
+        <options from_data_table="regions">
+        <column name="value" index="0"/>
+        <column name="name" index="1"/>
+        <filter type="param_value" ref="country" column="2"/>
+        </options>
+    </param>
+    <conditional name="selectCRSMode">
+        <param name="CRSMode" type="select" display="radio" label="Select a coordinate reference system">
+            <option value="name">Chose from a list of CRS</option>
+            <option value="code">Enter a CRS code</option>
+        </param>
+        <when value="name">
+            <param name="name" type="select" label="Coordinate reference system">
+                <option value="EPSG:4326">WGS 84 / Latitude-Longitude</option>
+                <option value="EPSG:3857">WGS 84 / Pseudo-Mercator</option>
+                <option value="EPSG:8857">WGS 84 / Equal Earth</option>
+            </param>
+        </when>
+        <when value="code">
+            <param name="code" type="text" label="SRID" help="CRS code">
+                <validator type="regex" message="the format must be author">.+:.+</validator>
+            </param>
+        </when>
+    </conditional>
+</section>

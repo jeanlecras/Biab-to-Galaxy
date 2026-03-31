@@ -1,0 +1,7 @@
+	--SECTION_NAME__country $SECTION_NAME.country
+²	--SECTION_NAME__region $SECTION_NAME.region
+	if $SECTION_NAME.selectCRSMode.CRSMode == "name":
+		--SECTION_NAME__crs $SECTION_NAME.selectCRSMode.name
+	else:
+		--SECTION_NAME__crs $SECTION_NAME.selectCRSMode.code
+	#end if

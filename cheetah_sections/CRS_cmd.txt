@@ -1,0 +1,5 @@
+	#if $SECTION_NAME.CRSMode == "name":
+		--SECTION_NAME__crs $SECTION_NAME.name
+	#else
+		--SECTION_NAME__crs $SECTION_NAME.code
+	#end if

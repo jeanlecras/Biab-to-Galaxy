@@ -1,0 +1,18 @@
+<conditional name="selectCRSMode">
+    <param name="CRSMode" type="select" display="radio" label="Select a coordinate reference system">
+        <option value="name">Chose from a list of CRS</option>
+        <option value="code">Enter a CRS code</option>
+    </param>
+    <when value="name">
+        <param name="name" type="select" label="Coordinate reference system">
+            <option value="EPSG:4326">WGS 84 / Latitude-Longitude</option>
+            <option value="EPSG:3857">WGS 84 / Pseudo-Mercator</option>
+            <option value="EPSG:8857">WGS 84 / Equal Earth</option>
+        </param>
+    </when>
+    <when value="code">
+        <param name="code" type="text" label="SRID" help="CRS code">
+            <validator type="regex" message="the format must be author">.+:.+</validator>
+        </param>
+    </when>
+</conditional>

@@ -1,0 +1,12 @@
+{
+    "text/csv": "csv",
+    "application/geo+json": "geojson",
+    "application/geopackage+sqlite3": "ab1",
+    "image/tiff;application=geotiff": "tiff",
+    "application/dbf": "shp",
+    "text/plain": "txt",
+    "text/tab-separated-values": "tabular,tsv",
+    "text/html": "html",
+    "image/jpg": "jpg",
+    "image/png": "png"
+}
