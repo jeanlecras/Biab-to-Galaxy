@@ -1,17 +1,11 @@
-# au lieu de faire des choses actions particulières pour chaque biab type différent, gérer un seul cas : bboxCRS car tous les autres paramètres sont inclus dans celui ci.
-# cette fonction renverra un fichier input contenant un bboxCRS complet ou incomplet
-# tous les commandes de type spécial utiliseront les mêmes paramètres dans le même ordre mais pas complété de la même manière
-# ordre : country, region, xmin, ymin, xmax, ymax, crs_name, crs_code length=8
-# les scripts biab retrouvet les valeurs de leurs varibales avec le nom du paramètre comme clé du dictionnaire input
-# les arguments peuvent être nommés par le nom de leur paramètre
-# si tous les types spéciaux sont considérés comme une forme de bboxCRS alors il n'y a pas besoin de rensiegner le type spécial, juste le nom du paramètre et le sous paramètre
-# il ne faut pas passer sys.argv en brute à la fonction, il faut un dictionnaire qui représente un paramètre par un nom et une valeur
-# SI mais il faut que la fonction ait un parseur
-
 import json
 import duckdb
+import base64
+import requests
+import sys
+import os
 
-#GENERATING countries.tsv AND regions.tsv
+print("initialising duckdb")
 ddb = duckdb.connect()
 ddb.install_extension("spatial")
 ddb.load_extension("spatial")
@@ -27,92 +21,141 @@ CRS_NAME2CODE = {
     "WGS 84 / Pseudo-Mercator": 3857,
     "WGS 84 / Equal Earth Greenwich": 8857
 }
+    
 
-def parser(args):
-    parsed_args = {}
-    for i in range(len(args)//2):
-        if not args[2*i].startswith("--"):
-            continue
-        arg_name = args[2*i][2:]
-        parsed_args[arg_name] = args[2*i+1]
-    return parsed_args
+key = base64.b64decode("VTRoTkxXUkVOeFRhN0NmSFVVbk4=").decode("utf-8")
+
+def get_crs_def(epsg_number):
+    base_url = f"https://api.maptiler.com/coordinates/search/{epsg_number}.json"
+    params = {
+        "limit": 2,
+        "exports": True,
+        "key": key,
+    }
+
+    try:
+        print("requesting", base_url)
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        results = data.get("results", [])
+        if (
+            results
+            and results[0].get("exports")
+            and results[0]["exports"].get("proj4")
+        ):
+            return results[0]
+        else:
+            raise ValueError(f"CRS definition not found for {epsg_number}")
+
+    except Exception as e:
+        print(f"get_crs_def error: {e}")
+        return None
 
 def generate_input_file(args):
-    parsed_args = parser(args)
     input_data = {}
-    for arg_name, arg_value in parsed_args.items():
-        if '__' not in arg_name:
-            input_data[arg_name] = arg_value
-            continue
+    
+    for i in range(1, len(args), 3):
+        print("args", args)
+        param_name, param_type, param_value = args[i:i+3]
         
-        param, sub_param = arg_name.split('__')
-        if param not in input_data:
-            input_data[param] = {
-                "country": {},
-                "region": {},
-                "bbox": [],
-                "CRS": {}
+        input_data[param_name] = {
+            "country": None,
+            "region": None,
+            "bbox": [],
+            "CRS": { # default CRS when no CRS is selected
+                "name": "WGS84 - Lat/long",
+                "authority": "EPSG",
+                "code": 4326,
+                "proj4Def": "+proj=longlat +datum=WGS84 +no_defs",
+                "unit": "degree",
                 }
+            }
             
-        match sub_param:
+        match param_type:
+            case "boolean":
+                input_data[param_name] = param_value=="true"
+                
+            case "int":
+                input_data[param_name] = int(param_value)
+                
+            case "float":
+                input_data[param_name] = float(param_value)
+                
+            case "options[]":
+                input_data[param_name] = param_value.split(",")
+                
+            case "text[]":
+                input_data[param_name] = param_value.split(",")
+                
+            case "int[]":
+                input_data[param_name] = list(map(int, param_value.split(",")))
+                
+            case "float[]":
+                input_data[param_name] = list(map(float, param_value.split(",")))
+            
             case "country":
-                # requête sql qui récupère adm0_src, geometry_bbox o`u adm0_name == country
                 country_query = f"""
                 select adm0_name, geometry_bbox
                 from read_parquet('{countries_parquet}')
-                where adm0_src = '{arg_value}'
+                where adm0_src = '{param_value}'
                 """
                 country_data = ddb.execute(country_query).fetchone()
-                input_data[param]["country"] = {
+                input_data[param_name]["country"] = {
                     "englishName": country_data[0],
-                    "code": arg_value[:2],
-                    "ISO3": arg_value,
+                    "code": param_value[:2],
+                    "ISO3": param_value,
                     "countryBboxWGS84": list(country_data[1].values())
                     }
                 
             case "region":
-                if arg_value != 'None':
-                    # requête sql qui récupère adm0_src, geometry_bboc o`u adm1_name == region
+                if param_value != 'None':
                     region_query = f"""
                     select adm0_src, adm1_name, geometry_bbox
                     from read_parquet('{regions_parquet}')
-                    where adm1_src = '{arg_value}'
+                    where adm1_src = '{param_value}'
                     """
                     region_data = ddb.execute(region_query).fetchone()
-                    input_data[param]["region"] = {
+                    input_data[param_name]["region"] = {
                         "ISO3166_2": region_data[0],
-                        "countryEnglishName": input_data[param]["country"]["englishName"],
+                        "countryEnglishName": input_data[param_name]["country"]["englishName"],
                         "regionName": region_data[1],
-                        "regionsBboxWGS84": list(region_data[2].values())
+                        "regionBboxWGS84": list(region_data[2].values())
                         }
-                
+            
             case "xmin" | "ymin" | "xmax" | "ymax":
-                input_data[param]["bbox"].append(arg_value)
+                input_data[param_name]["bbox"].append(param_value)
                 
-            case "crs_name":
-                # TODO trouver l'origine de ces trucs
-                input_data[param]["CRS"] = {
-                    "name": arg_value,
-                    "authority": "EPSG",
-                    "code": CRS_NAME2CODE[arg_value],
-                    # c'est la plaie, je remets à plus tard
-                    "unit": None,
-                    "proj4Def": None,
-                    "wktDef": None,
-                    # pourquoi un CRS doit avoir une bbox ?
-                    "CRSBboxWGS84": None
-                    }
-                
-            case "crs_code":
-                authority, code = arg_value.split(":")
-                input_data[param]["CRS"] = {
-                    "name": None,
+            case "crs":
+                authority, code = param_value.split(":")
+                crs_data = get_crs_def(code)
+                input_data[param_name]["CRS"]["authority"] = authority
+                input_data[param_name]["CRS"]["code"] = code
+                input_data[param_name] = {
                     "authority": authority,
                     "code": code,
-                    "CRSBboxWGS84": None,
-                    "proj4Def": None,
-                    "wktDef": None
+                    "name": crs_data['name'],
+                    "unit": crs_data['unit'],
+                    "CRSBboxWGS84": crs_data['bbox'],
+                    "proj4Def": crs_data['proj4Def'],
+                    "wktDef": crs_data['wktDef']
                     }
+            
+            case _: # including types text, options and mime
+                if not param_type.endswith("[]"):
+                    input_data[param_name] = param_value
+                else:
+                    collection = param_value.split(",")
+                    collection.pop()
+                    collection_path = os.path.abspath(param_name)
+                    input_data[param_name] = [collection_path+"/"+element for element in collection]
+                    
                 
     with open("input.json", "w") as f:
         json.dump(input_data, f)
+
+
+if __name__ == "__main__":
+    print(sys.argv)
+    generate_input_file(sys.argv)
