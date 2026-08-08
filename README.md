@@ -1,4 +1,4 @@
-# Bon in a box to Galaxy tool converter
+# Bon in a box to Galaxy tool converter (deprecated version)
 
 [Bon in a box](https://boninabox.geobon.org/) and [Galaxy](https://usegalaxy.org/) are two platforms for building and sharing scientific workflows. This tool helps developers migrate Biab tools to Galaxy by automating part of the process.
 
